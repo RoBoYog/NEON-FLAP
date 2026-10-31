@@ -614,4 +614,63 @@ def draw_scene():
         draw_button(home_btn, "HOME", CYAN)
 
 
-# ----------------------------------
+# ---------------------------------------------------------------------------
+# Main loop
+# ---------------------------------------------------------------------------
+
+try:
+    while running:
+        dt = min(clock.tick(FPS) / 1000.0, 0.04)
+        game["elapsed"] += dt
+        menu_cooldown = max(0.0, menu_cooldown - dt)
+
+        if reset_confirm and game["elapsed"] > reset_confirm_until:
+            reset_confirm = False
+
+        tap_position = None
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
+                    if menu_cooldown <= 0:
+                        if not game["started"] or game["dead"]:
+                            start_game()
+                        else:
+                            flap_bird()
+                elif event.key == pygame.K_r and game["dead"]:
+                    start_game()
+
+            elif event.type == pygame.FINGERDOWN:
+                tap_position = (event.x * SCREEN_W, event.y * SCREEN_H)
+                last_finger_time = pygame.time.get_ticks() / 1000.0
+
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Some Android Pygame builds emit a mouse event after touch.
+                now = pygame.time.get_ticks() / 1000.0
+                if now - last_finger_time > 0.25 and tap_position is None:
+                    tap_position = event.pos
+
+        if tap_position is not None:
+            handle_tap(tap_position)
+
+        update_game(dt)
+        update_particles(dt)
+        draw_scene()
+
+        screen.fill((5, 8, 22))
+        scaled = pygame.transform.smoothscale(logical, scaled_size)
+        screen.blit(scaled, (offset_x, offset_y))
+        pygame.display.flip()
+
+finally:
+    if current_bgm:
+        try:
+            current_bgm.stop()
+        except pygame.error:
+            pass
+    pygame.quit()
